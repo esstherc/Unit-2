@@ -1,19 +1,19 @@
-/* Map of GeoJSON data from airport-traffic.geojson */
-//declare map var in global scope
+/* Map of GeoJSON data from MegaCities.geojson */
+
+// Declare map var in global scope
 var map;
+
 //function to instantiate the Leaflet map
 function createMap(){
     //create the map
     map = L.map('map', {
         center: [20, 0],
-        zoom: 2.5
+        zoom: 2
     });
 
-    var Stadia_AlidadeSmooth = L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.{ext}', {
-        minZoom: 0,
-        maxZoom: 20,
-        attribution: '&copy; <a href="https://www.stadiamaps.com/" target="_blank">Stadia Maps</a> &copy; <a href="https://openmaptiles.org/" target="_blank">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-        ext: 'png'
+    //add OSM base tilelayer
+    L.tileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>'
     }).addTo(map);
 
     //call getData function
@@ -32,29 +32,32 @@ function onEachFeature(feature, layer) {
     };
 };
 
-
 //function to retrieve the data and place it on the map
 function getData(){
-    //load the data
-    fetch("data/airport-traffic.geojson")
+    // load the data
+    fetch("data/MegaCities.geojson")
         .then(function(response){
             return response.json();
         })
         .then(function(json){
-            var airplaneIcon = L.icon({
-                iconUrl: 'img/airplane.svg', 
-                iconSize: [38, 38], 
-                iconAnchor: [19, 19], 
-                popupAnchor: [0, -19] 
-            });
+            // Create marker options
+            var geojsonMarkerOptions = {
+                radius: 8,
+                fillColor: "#ff7800",
+                color: "#000",
+                weight: 1,
+                opacity: 1,
+                fillOpacity: 0.8
+            };
 
-            //create a Leaflet GeoJSON layer and add it to the map with custom icons
+            //create a Leaflet GeoJSON layer and add it to the map
             L.geoJson(json, {
                 onEachFeature: onEachFeature,
                 pointToLayer: function (feature, latlng){
-                    return L.marker(latlng, {icon: airplaneIcon});
+                    return L.marker(latlng, geojsonMarkerOptions);
                 }
             }).addTo(map);
+  
         })
 };
 
