@@ -2,3 +2,9 @@
 #map {
     height: 100vh; 
 }
+
+.leaflet-popup-content p {
+    margin: 0.05em 0;
+    line-height: 1.1; /* Adjusts the space between lines of text */
+    font-family: Georgia, serif; 
+}
