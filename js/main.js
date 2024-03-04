@@ -107,6 +107,7 @@ function pointToLayer(feature, latlng, attributes){
         offset: new L.Point( 0,- 0.6* options.radius)
     });
     //return the circle marker to the L.geoJson pointToLayer option
+
     return layer;
 };
 
@@ -279,7 +280,7 @@ function createLegend(attributes) {
 function createTitle(attributes){
     var InfoControl = L.Control.extend({
         options: {
-            position: 'topleft'
+            position: 'topright'
         },
     
         onAdd: function () {

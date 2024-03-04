@@ -44,6 +44,9 @@
         float: left;  
     }
 
+.leaflet-popup-content {
+    z-index: 1000;
+}
 
 .leaflet-popup-content p {
     margin: 0.05em 0;
@@ -69,9 +72,9 @@
 
 .info-box {
     position: absolute;
+    z-index: 400;
     top: 10px;
     left: 10px;
-    z-index: 1000; 
     padding: 10px 15px;
     background: rgba(255, 255, 255, 0.8);
     border-radius: 10px;
