@@ -1,9 +1,20 @@
 /*Add CSS styles here*/
 #map {
     height: 800px; 
-    width: 80%;
+    width: 100%;
     display: inline-block;
 }
+.sequence-control-container {  
+    width: 350px;  
+    height: 30px;  
+    background-color: rgba(255,255,255,0.8);  
+    padding: 15px;  
+    line-height: 45px;  
+    text-align: center;  
+    border: solid gray 1px;  
+    border-radius: 5px;
+}  
+
     #panel {
         width: 16%;
         padding: 20px;
@@ -13,15 +24,16 @@
         line-height: 42px;
     }
     .range-slider {  
-        width: 55%;  
-    }  
+        width: 250px;  
+    } 
     
     .step {  
-        width: 20%;  
+        width: 40px;  
     }  
     
     .step img {  
         width: 100%;  
+        height:auto;
     }  
     
     #forward {
@@ -36,6 +48,46 @@
 .leaflet-popup-content p {
     margin: 0.05em 0;
     line-height: 1.1; /* Adjusts the space between lines of text */
-    font-family: Georgia, serif; 
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
+.legend-control-container {
+    text-align: center;
+    padding: 12px 8px;
+    background: rgba(238,238,238,0.8); 
+    box-shadow: 0 0 15px rgba(0,0,0,0.2);
+    border-radius: 5px;
+    font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.legend-header {
+    font-size: 16px;
+    font-weight: bold;
+    font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    line-height: 0.5;
+}
+
+.info-box {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    z-index: 1000; 
+    padding: 10px 15px;
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 10px;
+    max-width: 300px; 
+    box-shadow: 0 0 5px rgba(0,0,0,0.2);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-size: 14px;
+}
+
+.info-box h1 {
+    font-size: 18px;
+    margin-bottom: 5px;
+    text-align: center;
+}
+
+.info-box p {
+    margin-bottom: 5;
+    text-align: center;
+}

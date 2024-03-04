@@ -2,7 +2,9 @@
 
 //declare variable 
 var map;
+var attributes = [];
 var index= 0; 
+var dataStats = {}; 
 
 //Step 1. Create the Leaflet map
 function createMap(){
@@ -23,23 +25,35 @@ function createMap(){
     getData();
 };
 
-function calcMinValue(data){
-    //create empty array to store all data values
-    var allValues = [];
-    //loop through each city
-    for(var airport of data.features){
-        //loop through each year
-        for(var year = 2011; year <= 2022; year+=1){
-              //get traffic for current year
-              var value = airport.properties[String(year)];
-              //add value to array
-              allValues.push(value);
+//Step2. Creating a variable to hold the attributes array in main.js
+function getData(map){
+    //load the data
+    fetch("data/airport-traffic.geojson")
+        .then(response => response.json())
+        .then(json => {
+            attributes = processData(json); //create an attributes array
+            minValue = calcStats(json);
+            createPropSymbols(json, attributes);
+            createSequenceControls(attributes);
+            createLegend(attributes);
+            createTitle(attributes);
+        })
+};
+
+function calcStats(data){
+    var allValues = [];     //create empty array to store all data values
+    for(var airport of data.features){  //loop through each city
+        for(var year = 2011; year <= 2022; year+=1){    //loop through each year
+              var value = airport.properties[String(year)];   //get traffic for current year
+              allValues.push(value);  //add value to array
         }
     }
-    //get minimum value of our array
-    var minValue = Math.min(...allValues)
-
-    return minValue;
+    //get min, max, mean stats for our array
+    dataStats.min = Math.min(...allValues);
+    dataStats.max = Math.max(...allValues);
+    //calculate meanValue
+    var sum = allValues.reduce(function(a, b){return a+b;});
+    dataStats.mean = sum/ allValues.length;
 }
 
 //calculate the radius of each proportional symbol
@@ -47,24 +61,29 @@ function calcPropRadius(attValue) {
     //constant factor adjusts symbol sizes evenly
     var minRadius = 4;
     //Flannery Appearance Compensation formula
-    var radius = 1.0083 * Math.pow(attValue/minValue,0.5715) * minRadius
-
+    var radius = 1.0083 * Math.pow(attValue/dataStats['min'],0.5715) * minRadius
     return radius;
 };
 
+function createPopupContent(properties, attribute){
+    var valueInMillions = (properties[attribute] / 1000000).toFixed(2);
+    var popupContent = 
+    "<p><b>Airport:</b> " + properties.Airport  + " (" + properties.Code + ")"
+  + "<p><b>City:</b> " + properties.Location + ", " + properties.Country
+  + "<p><b>Passenger Flow in " + attribute + ":</b> " + valueInMillions + " Million";
+
+    return popupContent;
+};
 
 //function to convert markers to circle markers
 function pointToLayer(feature, latlng, attributes){
-    //Determine which attribute to visualize with proportional symbols
-    var attribute = attributes[0];
+    var attribute = attributes[0]; //Determine which attribute to visualize with proportional symbols
     
-    //check
-    //console.log(attribute);
+    //check  console.log(attribute);
 
-    //create marker options
-    var options = {
+    var options = { //create marker options
         fillColor: "#1e2f97",
-        color: "#fff",
+        color: "#ffffff",
         weight: 1,
         opacity: 1,
         fillOpacity: 0.8,
@@ -81,10 +100,7 @@ function pointToLayer(feature, latlng, attributes){
     var layer = L.circleMarker(latlng, options);
 
     //build popup content string - Initializing
-    var popupContent = "<p><b>Airport:</b> " + feature.properties.Airport  + " (" + feature.properties.Code + ")"
-                     + "<p><b>City:</b> " + feature.properties.Location + ", " + feature.properties.Country
-                     + "<p><b>Passenger Flow in " + attribute + ":</b> " + feature.properties[attribute] ;
-                     + "</p>";
+    var popupContent = createPopupContent(feature.properties, attribute);
 
     //bind the popup to the circle marker
     layer.bindPopup(popupContent,{
@@ -103,100 +119,85 @@ function createPropSymbols(data,attributes){
             return pointToLayer(feature, latlng, attributes);
         }
         }).addTo(map);
-}
-
-//Step2: Import GeoJSON data
-function getData(){
-    //load the data
-    fetch("data/airport-traffic.geojson")
-        .then(function(response){
-            return response.json();
-        })
-        //Step 3. Add markers for point features to the map
-        .then(function(json){ //加工 在then里处理 额外数据 json() to (json)
-            attributes = processData(json);
-            //calculate minimum data value
-            minValue = calcMinValue(json);
-            // Call function to create proportional symbols
-            createPropSymbols(json);
-            createSequenceControls(attributes); 
-        })
 };
 
 document.addEventListener('DOMContentLoaded',createMap);
 
-//GOAL: Allow the user to sequence through the attributes and resymbolize the map 
-//Step 1: Create new sequence controls
-function createSequenceControls(attributes){
-    //create range input element (slider)
-    var slider = "<input class='range-slider' type='range'></input>";
-    document.querySelector("#panel").insertAdjacentHTML('beforeend',slider);
 
-    //set slider attributes
-    document.querySelector(".range-slider").max = 11;
-    document.querySelector(".range-slider").min = 0;
-    document.querySelector(".range-slider").value = 0;
-    document.querySelector(".range-slider").step = 1;
+// Create new sequence controls
+function createSequenceControls(attributes) {
+    var SequenceControl = L.Control.extend({
+        options: {
+            position: 'bottomleft' // Specifies the position of the control on the map
+        },
 
-    document.querySelector('#panel').insertAdjacentHTML('beforeend','<button class="step" id="reverse"></button>');
-    document.querySelector('#panel').insertAdjacentHTML('beforeend','<button class="step" id="forward"></button>');
+        onAdd: function() {
+            // Create the control container with a particular class name
+            var container = L.DomUtil.create('div', 'sequence-control-container');
 
-    //replace button content with images
-    document.querySelector('#reverse').insertAdjacentHTML('beforeend',"<img src='img/backward.svg'>");
-    document.querySelector('#forward').insertAdjacentHTML('beforeend',"<img src='img/forward.svg'>");
+            // Create range input element (slider) and append it to the container
+            var slider = '<input class="range-slider" type="range" min="0" max="11" value="0" step="1"></input>';
+            container.insertAdjacentHTML('beforeend', slider);
 
-    //Step 5: click listener for buttons
-    document.querySelectorAll('.step').forEach(function(step){
-        step.addEventListener("click", function(){
-            //Step 6: increment or decrement depending on button clicked
-            if (step.id == 'forward'){
-                index++;
-                //Step 7: if past the last attribute, wrap around to first attribute
-                index = index > 11 ? 0 : index;
-            } else if (step.id == 'reverse'){
-                index--;
-                //Step 7: if past the first attribute, wrap around to last attribute
-                index = index < 0 ? 11 : index;
-            };
+            // Create buttons and append them to the container
+            var buttons = '<button class="step" id="reverse"><img src="img/backward.svg"></button>' +
+                          '<button class="step" id="forward"><img src="img/forward.svg"></button>';
+            container.insertAdjacentHTML('beforeend', buttons);
 
-            //Step 8: update slider
-            document.querySelector('.range-slider').value = index;
-            console.log(attributes);
-            console.log(attributes[index]);
-            updatePropSymbols(attributes[index]);
-        })
-    })
+            // Set up event listeners for the slider and buttons
+            this.setupListeners(container);
+
+            // Disable any mouse event listeners for the container
+            L.DomEvent.disableClickPropagation(container);
+
+            return container;
+        },
+
+        setupListeners: function(container) {
+            // Listener for the slider
+            var slider = container.querySelector('.range-slider');
+            slider.addEventListener('input', function() {
+                index = this.value;
+                updatePropSymbols(attributes[index]);
+            });
+
+            // Listeners for the buttons
+            container.querySelectorAll('.step').forEach(function(step) {
+                step.addEventListener('click', function() {
+                    if (this.id == 'forward') {
+                        index++;
+                        index = index > 11 ? 0 : index;
+                    } else if (this.id == 'reverse') {
+                        index--;
+                        index = index < 0 ? 11 : index;
+                    }
+                    slider.value = index;
+                    updatePropSymbols(attributes[index]);
+                });
+            });
+        }
+    });
+
+    // Add the new SequenceControl to the map
+    map.addControl(new SequenceControl());
+}
+
     
 //Step 10: Resize proportional symbols according to new attribute values
 function updatePropSymbols(attribute){
     map.eachLayer(function(layer){
         if (layer.feature && layer.feature.properties[attribute]){
-            //access feature properties
-            var props = layer.feature.properties;
-            var feature = layer.feature
-            //update each feature's radius based on new attribute values
-            var radius = calcPropRadius(props[attribute]);
+            
+            var props = layer.feature.properties; //access feature properties
+            var radius = calcPropRadius(props[attribute]); //update each feature's radius based on new attribute values
             layer.setRadius(radius);
 
-            var popupContent = 
-                       "<p><b>Airport:</b> " + feature.properties.Airport  + " (" + feature.properties.Code + ")"
-                     + "<p><b>City:</b> " + feature.properties.Location + ", " + feature.properties.Country
-                     + "<p><b>Passenger Flow in " + attribute + ":</b> " + props[attribute];
-
-            //update popup content            
-            popup = layer.getPopup();            
-            popup.setContent(popupContent).update();
+            var popupContent = createPopupContent(props, attribute);    
+            document.getElementById('legend-year').textContent = attribute;
+            layer.getPopup().setContent(popupContent).update(); //update popup with new content 
         };
     });
 };        
-
-    //Step 5: input listener for slider
-    document.querySelector('.range-slider').addEventListener('input', function(){            
-        //Step 6: get the new index value
-        var index = this.value;
-        console.log(index)
-    });
-};
 
 //Step 3: build an attributes array from the data
 function processData(data) {
@@ -222,23 +223,78 @@ function processData(data) {
     return attributes;
 }
 
-// Creating a variable to hold the attributes array in main.js
-function getData(map){
-    //load the data
-    fetch("data/airport-traffic.geojson")
-        .then(function(response){
-            return response.json();
-        })
-        .then(function(json){
-             //create an attributes array
-            var attributes = processData(json);
-            // console.log(attributes); 
-            minValue = calcMinValue(json);
-            createPropSymbols(json, attributes);
-            createSequenceControls(attributes);
-        })
-};
 
+function createLegend(attributes) {
+    var LegendControl = L.Control.extend({
+        options: {
+            position: 'bottomright'
+        },
+
+        onAdd: function() {
+            var container = L.DomUtil.create('div', 'legend-control-container');
+            //Dynamically set the initial attribute year in the legend
+            container.innerHTML = `<p class="legend-header">Passenger Flow in <span id="legend-year">${attributes[0]}</span></p>`;
+            L.DomEvent.disableClickPropagation(container);
+
+            //Step 1: start attribute legend svg string
+            var svg = '<svg id="attribute-legend" width="160px" height="60px">';
+
+            //Array of circle names to base loop on
+            var circles = ["max","mean","min"];
+
+            //Step 2: loop to add each circle and text to svg string
+            for (var i=0; i<circles.length; i++){
+
+                //Step 3: assign the r and cy attributes  
+                var radius = calcPropRadius(dataStats[circles[i]]);  
+                var cy = 59 - radius; 
+
+                //circle string
+                svg += '<circle class="legend-circle" id="' + circles[i] + '" r="' + radius + '"cy="' + cy + 
+                '" fill="#1e2f97" fill-opacity="0.8" stroke="#ffffff" cx="30"/>';  
+
+                //evenly space out labels            
+                var textY = i * 20 + 20;            
+                var valueInMillions = (dataStats[circles[i]] / 1000000).toFixed(2);
+                //text string            
+                svg += '<text id="' + circles[i] + '-text" x="65" y="' + textY + '">' + valueInMillions + " million" + '</text>';
+            };
+                
+            //close svg string
+            svg += "</svg>";
+
+            //add attribute legend svg to container
+            container.insertAdjacentHTML('beforeend',svg);
+            L.DomEvent.disableClickPropagation(container); 
+
+            return container;
+            
+        }
+    });
+
+    // Correctly instantiate and add the control to the map
+    map.addControl(new LegendControl());
+}
+
+function createTitle(attributes){
+    var InfoControl = L.Control.extend({
+        options: {
+            position: 'topleft'
+        },
+    
+        onAdd: function () {
+            var container = L.DomUtil.create('div', 'info-box');
+            container.innerHTML = `
+                <h1>Tracking Passenger Flow at the World's 10 Busiest International Airports</h1>
+                <p>This dataset offers a comprehensive overview of passenger flow through the world’s ten busiest international airports from 2011 to 2020. It captures the annual passenger numbers to observe trends, growth patterns, and fluctuations over a decade. Particularly noteworthy is the dataset's illumination of the dramatic impacts of global events, most significantly the COVID-19 pandemic, on international air travel.</p>
+            `;
+            L.DomEvent.disableClickPropagation(container); 
+            return container;
+        }
+    });
+    map.addControl(new InfoControl());
+
+}
 
     /*var airplaneIcon = L.icon({
         iconUrl: 'img/airplane.svg', 
